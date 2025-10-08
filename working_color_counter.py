@@ -1,6 +1,6 @@
 from shiny import App, reactive, render, ui
 import random
-green_prob = 0.8 # hardcoded probabilities
+green_prob = 0.8 # hardcoded probabilities, discussions below
 blue_prob = 0.8
 
 # Issues/To-Do: 
