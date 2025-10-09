@@ -1,10 +1,10 @@
 from shiny import App, reactive, render, ui
+from matplotlib import pyplot as plt
 import random
 green_prob = 0.8 # hardcoded probabilities, discussions below
 blue_prob = 0.8
 
 # Issues/To-Do: 
-## Add plots
 ## Nicer UI?
 ## Can't get color to display on buttons. 
 ## Need to make text better
@@ -12,15 +12,18 @@ blue_prob = 0.8
 ## Could query green and blue probabilities in a UI element
 ## Display probabilities of truly incrementing each color on button press
 
+green_hex="#34b754"
+blue_hex="#337ab7"
+
 app_ui = ui.page_auto(
     ui.card(
         ui.layout_columns(
             ui.input_action_button("green_btn", "Pick Green!", class_="btn-lg",
-                                   style = "height: 200px; background-color = #008000"), # color isn't working here
+                                   style = f"height: 200px; color: #fff; background-color: {green_hex};"),
             ui.input_action_button("reset", "Reset Scores", class_="btn-secondary",
                                    style = "height: 200px"),
             ui.input_action_button("blue_btn", "Pick Blue!", class_="btn-lg",
-                                   style = "height: 200px")
+                                   style = f"height: 200px; color: #fff; background-color: {blue_hex};")
             )
     ),
     ui.card(
@@ -30,6 +33,11 @@ app_ui = ui.page_auto(
                 ui.h1("Total Green Points"),
                 ui.card_body(
                     ui.h2(ui.output_text("counter1")),
+                )
+            ),
+             ui.card(
+                ui.card_body(
+                   ui.output_plot("plot"),
                 )
             ),
             ui.card(
@@ -78,6 +86,10 @@ def server(input, output, session):
     @render.text
     def counter2():
         return str(count2())
+    @render.plot
+    def plot():
+        plt.bar(x=["Green","Blue"],height=[count1(),count2()],color=[f'{green_hex}',f'{blue_hex}'])
+        plt.ylim(0,max(count1(),count2())+1)
 
 app = App(app_ui, server)
 app.run() # actually run the app
