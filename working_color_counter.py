@@ -2,24 +2,26 @@ from shiny import App, reactive, render, ui
 from matplotlib import pyplot as plt
 import random
 import os
+import io
 
+import numpy as np
+
+# Hardcoded parameters
 green_prob_start = 0.8
 blue_prob_start = 0.8
 green_goal_start = 20
 blue_goal_start = 20
 
-# Issues/To-Do: 
-## Make data saveable. I've gotten this up following guidance here
-### https://shiny.posit.co/py/api/core/render.download.html
-### but the button isn't working
-## Add description 
-## the colors in the data aren't as strings, not major but will probably be a problem depending on language to analyze
+sidebar_state = "closed" # start sidebar closed by default; a possibly better alternative would be
+# sidebar_state = "desktop"
 
 green_hex="#34b754"
 blue_hex="#337ab7"
 black_hex="#000000"
 
-class Data: # This is the easiest way I can think to do this, it puts all the code up here and then I can call later
+description = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam porta, nulla et volutpat porta, mi nulla fermentum urna, bibendum consectetur felis nulla eu nibh. Vivamus dictum lectus egestas, venenatis turpis eu, tincidunt nunc. Nullam facilisis urna sed orci viverra interdum. Etiam blandit semper fringilla."
+
+class Data: # Simple object to store and later write data 
     def __init__(self, cols):
         self.cols = cols
         self.data = []
@@ -46,14 +48,14 @@ class Data: # This is the easiest way I can think to do this, it puts all the co
         self.data = []
     # I probably should have just used pandas but I forgot about that
 
-
-data = Data(["green_score", "blue_score", "button_chosen", "green_prob", "blue_prob", "gren_goal", "blue_goal"]) # hardcode column names and a data object to reference
+data_cols = ["green_score", "blue_score", "button_chosen", "green_prob", "blue_prob", "gren_goal", "blue_goal"]
+data = Data(data_cols)
 
 app_ui = ui.page_auto(
     ui.sidebar(
         ui.h2("Color Picker Project:"), 
-        ui.p("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam porta, nulla et volutpat porta, mi nulla fermentum urna, bibendum consectetur felis nulla eu nibh. Vivamus dictum lectus egestas, venenatis turpis eu, tincidunt nunc. Nullam facilisis urna sed orci viverra interdum. Etiam blandit semper fringilla."), # add description
-        ui.input_action_button("save_data", "Save Data", class_="btn-primary"), # to save data
+        ui.p(description), 
+        ui.download_button("save_data", "Save Data", class_="btn-secondary"), # to save data
         ui.h1("Adjust parameters:"), # these are largely self explanatory
         ui.input_numeric("green_prob_chooser", "Probability of green button working", 
                          0.8, min=0, max=1),
@@ -63,14 +65,20 @@ app_ui = ui.page_auto(
                          20, min=0, max=512),
         ui.input_numeric("blue_win_condition", "Points for blue completion", 
                          20, min=0, max=512),
-        ui.input_action_button("update_params", "Update Parameters")
+        ui.input_action_button("update_params", "Update Parameters"),
+        width = 450,
+        open=sidebar_state
     ),
     ui.card(
         ui.layout_columns(
             ui.input_action_button("green_btn", "Pick Green!", class_="btn-lg",
                                    style = f"height: 200px; color: #fff; background-color: {green_hex};"),
-            ui.input_action_button("reset", "Reset Scores", class_="btn-secondary",
-                                   style = "height: 200px"),
+            ui.layout_columns(
+                ui.input_action_button("reset", "Reset Scores", 
+                                       class_="btn-secondary", style = "height: 200px; width = 100px"),
+                ui.input_action_button("reset_data", "Reset Data",
+                                       class_="btn-secondary", style = "height: 200px; width = 100px")
+            ),
             ui.input_action_button("blue_btn", "Pick Blue!", class_="btn-lg",
                                    style = f"height: 200px; color: #fff; background-color: {blue_hex};")
             )
@@ -81,12 +89,14 @@ app_ui = ui.page_auto(
             ui.card(
                 ui.card(
                     ui.h1("Total Green Points"),
+                    ui.output_text("green_prob_text"),
                     ui.card_body(
                         ui.h2(ui.output_text("counter1")),
                     )
                 ),
                 ui.card(
                     ui.h1("Total Blue Points"),
+                    ui.output_text("blue_prob_text"),
                     ui.card_body(
                         ui.h2(ui.output_text("counter2")),
                     )
@@ -114,7 +124,7 @@ def server(input, output, session):
     @reactive.effect
     @reactive.event(input.green_btn) 
     def _():
-        data.append([count1(), count2(), "Green", green_prob(), blue_prob(), 
+        data.append([count1(), count2(), "'Green'", green_prob(), blue_prob(), 
                     green_goal(), blue_goal()]) # I don't know what data they want
         if random.random() <= green_prob(): # could increment either counters
             count1.set(count1() + 1)
@@ -125,7 +135,7 @@ def server(input, output, session):
     @reactive.effect # Now for the blue button
     @reactive.event(input.blue_btn)
     def _():
-        data.append([count1(), count2(), "Blue", green_prob(), blue_prob(), 
+        data.append([count1(), count2(), "'Blue'", green_prob(), blue_prob(), 
                     green_goal(), blue_goal()]) # I don't know what data they want
         if random.random() <= blue_prob():
             count2.set(count2() + 1)
@@ -138,6 +148,12 @@ def server(input, output, session):
     def _():
         count1.set(0)
         count2.set(0)
+
+    @reactive.effect
+    @reactive.event(input.reset_data)
+    def _():
+        data.clear_data()
+
 
     @reactive.effect
     @reactive.event(input.update_params)
@@ -156,6 +172,12 @@ def server(input, output, session):
     @render.text
     def counter2():
         return str(count2())
+    @render.text
+    def green_prob_text():
+        return "The probability of incrementing green with a green button press is " + str(green_prob())
+    @render.text
+    def blue_prob_text():
+        return "The probability of incrementing blue with a blue button press is " + str(blue_prob())
     @render.plot
     def plot():
         k = 0 # Make bars aligned well
@@ -167,13 +189,9 @@ def server(input, output, session):
         plt.hlines(green_goal(), xmin=-0.4, xmax=0.4, color = black_hex)
         plt.hlines(blue_goal(), xmin=0.6, xmax = 1.4, color = black_hex)
 
-    @render.download()
+    @render.download(filename = "color_picker_data.csv")
     def save_data():
-        path = os.path.join(os.path.dirname(__file__), "color_picker_data.csv")
-        return path
-        with open(path, "w") as f:
-            f.print(str(data))
-        return os
+        yield str(data) # we are just yielding a string of data (defined the method earlier)
 
 app = App(app_ui, server)
 app.run() # actually run the app
