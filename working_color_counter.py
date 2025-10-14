@@ -46,10 +46,13 @@ class Data: # Simple object to store and later write data
         return s
     def clear_data(self): # clear data when called
         self.data = []
+    def copy(self):
+        newdata = Data(self.cols)
+        newdata.data = self.data
+        return newdata
     # I probably should have just used pandas but I forgot about that
 
 data_cols = ["green_score", "blue_score", "button_chosen", "green_prob", "blue_prob", "gren_goal", "blue_goal"]
-data = Data(data_cols)
 
 app_ui = ui.page_auto(
     ui.sidebar(
@@ -119,12 +122,15 @@ def server(input, output, session):
     blue_prob = reactive.value(blue_prob_start)
     green_goal = reactive.value(green_goal_start)
     blue_goal = reactive.value(blue_goal_start)
+
+    data = reactive.value(Data(data_cols)) 
+    # data stores a point to a Data object. If we want to modify data, we modify the pointer in data.get()
     
     # Increment counter when button is pressed
     @reactive.effect
     @reactive.event(input.green_btn) 
     def _():
-        data.append([count1(), count2(), "'Green'", green_prob(), blue_prob(), 
+        data.get().append([count1(), count2(), "'Green'", green_prob(), blue_prob(), 
                     green_goal(), blue_goal()]) # I don't know what data they want
         if random.random() <= green_prob(): # could increment either counters
             count1.set(count1() + 1)
@@ -135,7 +141,7 @@ def server(input, output, session):
     @reactive.effect # Now for the blue button
     @reactive.event(input.blue_btn)
     def _():
-        data.append([count1(), count2(), "'Blue'", green_prob(), blue_prob(), 
+        data.get().append([count1(), count2(), "'Blue'", green_prob(), blue_prob(), 
                     green_goal(), blue_goal()]) # I don't know what data they want
         if random.random() <= blue_prob():
             count2.set(count2() + 1)
@@ -152,7 +158,7 @@ def server(input, output, session):
     @reactive.effect
     @reactive.event(input.reset_data)
     def _():
-        data.clear_data()
+        data.get().clear_data()
 
 
     @reactive.effect
@@ -191,7 +197,7 @@ def server(input, output, session):
 
     @render.download(filename = "color_picker_data.csv")
     def save_data():
-        yield str(data) # we are just yielding a string of data (defined the method earlier)
+        yield str(data.get()) # we are just yielding a string of data (defined the method earlier)
 
 app = App(app_ui, server)
 app.run() # actually run the app
