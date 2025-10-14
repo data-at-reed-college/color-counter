@@ -124,7 +124,7 @@ def server(input, output, session):
     blue_goal = reactive.value(blue_goal_start)
 
     data = reactive.value(Data(data_cols)) 
-    # data stores a point to a Data object. If we want to modify data, we modify the pointer in data.get()
+    # data stores a pointer to a Data object. If we want to modify data, we modify the pointer in data.get()
     
     # Increment counter when button is pressed
     @reactive.effect
