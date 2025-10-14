@@ -46,13 +46,9 @@ class Data: # Simple object to store and later write data
         return s
     def clear_data(self): # clear data when called
         self.data = []
-    def copy(self):
-        newdata = Data(self.cols)
-        newdata.data = self.data
-        return newdata
     # I probably should have just used pandas but I forgot about that
 
-data_cols = ["green_score", "blue_score", "button_chosen", "green_prob", "blue_prob", "gren_goal", "blue_goal"]
+data_cols = ["green_score", "blue_score", "button_chosen", "green_prob", "blue_prob", "gren_goal", "blue_goal"] # columns to collect data on. Really the last 4 are largely fixed values, but there's no other way to record them nicely in a csv
 
 app_ui = ui.page_auto(
     ui.sidebar(
@@ -124,7 +120,7 @@ def server(input, output, session):
     blue_goal = reactive.value(blue_goal_start)
 
     data = reactive.value(Data(data_cols)) 
-    # data stores a point to a Data object. If we want to modify data, we modify the pointer in data.get()
+    # data stores a pointer to a Data object. If we want to modify data, we modify the pointer in data.get() as a Data object. This makes the data local to each web-session, so the data don't mingle with each other
     
     # Increment counter when button is pressed
     @reactive.effect
