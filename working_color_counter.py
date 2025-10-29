@@ -1,4 +1,5 @@
 from shiny import App, reactive, render, ui
+import shiny
 from matplotlib import pyplot as plt
 import random
 import os
@@ -71,19 +72,19 @@ app_ui = ui.page_auto(
     ui.card(
         ui.layout_columns(
             ui.input_action_button("green_btn", "Pick Green!", class_="btn-lg",
-                                   style = f"height: 200px; color: #fff; background-color: {green_hex};"),
+                                   style = f"height: 125px; color: #fff; background-color: {green_hex};"),
             ui.layout_columns(
                 ui.input_action_button("reset", "Reset Scores", 
-                                       class_="btn-secondary", style = "height: 200px; width = 100px"),
+                                       class_="btn-secondary", style = "height: 150px; width = 125px"),
                 ui.input_action_button("reset_data", "Reset Data",
-                                       class_="btn-secondary", style = "height: 200px; width = 100px")
+                                       class_="btn-secondary", style = "height: 150px; width = 125px")
             ),
             ui.input_action_button("blue_btn", "Pick Blue!", class_="btn-lg",
-                                   style = f"height: 200px; color: #fff; background-color: {blue_hex};")
+                                   style = f"height: 125px; color: #fff; background-color: {blue_hex};")
             )
     ),
     ui.card(
-        ui.card_header("Current Status:"),
+        #ui.card_header("Current Status:"),
         ui.layout_columns(
             ui.card(
                 ui.card(
@@ -196,4 +197,8 @@ def server(input, output, session):
         yield str(data.get()) # we are just yielding a string of data (defined the method earlier)
 
 app = App(app_ui, server)
-app.run() # actually run the app
+
+shiny.run_app(app=app,
+              host="0.0.0.0",
+              port=7860
+              ) # actually run the app
