@@ -49,7 +49,7 @@ class Data: # Simple object to store and later write data
         self.data = []
     # I probably should have just used pandas but I forgot about that
 
-data_cols = ["green_score", "blue_score", "button_chosen", "green_prob", "blue_prob", "gren_goal", "blue_goal"] # columns to collect data on. Really the last 4 are largely fixed values, but there's no other way to record them nicely in a csv
+data_cols = ["green_score", "blue_score", "button_chosen", "green_prob", "blue_prob", "gren_goal", "blue_goal", "green_start", "blue_start"] # columns to collect data on. Really the last 4 are largely fixed values, but there's no other way to record them nicely in a csv
 
 app_ui = ui.page_auto(
     ui.sidebar(
@@ -65,6 +65,10 @@ app_ui = ui.page_auto(
                          20, min=0, max=512),
         ui.input_numeric("blue_win_condition", "Points for blue completion", 
                          20, min=0, max=512),
+        ui.input_numeric("green_start", "Points to start green at", 
+                         0, min=0, max=512),
+        ui.input_numeric("blue_start", "Points to start blue at", 
+                         0, min=0, max=512),
         ui.input_action_button("update_params", "Update Parameters"),
         width = 450,
         open=sidebar_state
@@ -75,9 +79,9 @@ app_ui = ui.page_auto(
                                    style = f"height: 125px; color: #fff; background-color: {green_hex};"),
             ui.layout_columns(
                 ui.input_action_button("reset", "Reset Scores", 
-                                       class_="btn-secondary", style = "height: 150px; width = 125px"),
+                                       class_="btn-secondary", style = "height: 125px; width = 125px"),
                 ui.input_action_button("reset_data", "Reset Data",
-                                       class_="btn-secondary", style = "height: 150px; width = 125px")
+                                       class_="btn-secondary", style = "height: 125px; width = 125px")
             ),
             ui.input_action_button("blue_btn", "Pick Blue!", class_="btn-lg",
                                    style = f"height: 125px; color: #fff; background-color: {blue_hex};")
@@ -119,6 +123,10 @@ def server(input, output, session):
     blue_prob = reactive.value(blue_prob_start)
     green_goal = reactive.value(green_goal_start)
     blue_goal = reactive.value(blue_goal_start)
+    green_start = reactive.value(0)
+    blue_start = reactive.value(0)
+    green_sign = reactive.value(1) # these are based on start and goals, tell whether or not to decrement or increment scores; take on either 1 or -1
+    blue_sign = reactive.value(1)
 
     data = reactive.value(Data(data_cols)) 
     # data stores a pointer to a Data object. If we want to modify data, we modify the pointer in data.get() as a Data object. This makes the data local to each web-session, so the data don't mingle with each other
@@ -128,22 +136,22 @@ def server(input, output, session):
     @reactive.event(input.green_btn) 
     def _():
         data.get().append([count1(), count2(), "'Green'", green_prob(), blue_prob(), 
-                    green_goal(), blue_goal()]) # I don't know what data they want
+                    green_goal(), blue_goal(), green_start(), blue_start()]) # I don't know what data they want
         if random.random() <= green_prob(): # could increment either counters
-            count1.set(count1() + 1)
+            count1.set(count1() + green_sign() * 1)
             return
-        count2.set(count2() + 1)
+        count2.set(count2() + blue_sign() * 1)
 
     
     @reactive.effect # Now for the blue button
     @reactive.event(input.blue_btn)
     def _():
         data.get().append([count1(), count2(), "'Blue'", green_prob(), blue_prob(), 
-                    green_goal(), blue_goal()]) # I don't know what data they want
+                    green_goal(), blue_goal(), green_start(), blue_start()]) # I don't know what data they want
         if random.random() <= blue_prob():
-            count2.set(count2() + 1)
+            count2.set(count2() + blue_sign() * 1)
             return
-        count1.set(count1() + 1)
+        count1.set(count1() + green_sign() * 1)
     
     # Reset both counters when reset button is pressed; do we want this?
     @reactive.effect
@@ -165,8 +173,20 @@ def server(input, output, session):
         blue_prob.set(input.blue_prob_chooser())
         green_goal.set(input.green_win_condition())
         blue_goal.set(input.blue_win_condition())
-        count1.set(0)
-        count2.set(0)
+        green_start.set(input.green_start())
+        blue_start.set(input.blue_start())
+        count1.set(green_start())
+        count2.set(blue_start())
+
+        if green_goal() >= green_start():
+            green_sign.set(1)
+        else:
+            green_sign.set(-1)
+
+        if blue_goal() >= blue_start():
+            blue_sign.set(1)
+        else:
+            blue_sign.set(-1)
     
     # Display the current counts
     @render.text
@@ -177,14 +197,14 @@ def server(input, output, session):
         return str(count2())
     @render.text
     def green_prob_text():
-        return "The probability of incrementing green with a green button press is " + str(green_prob())
+        return "The probability of modifying green with a green button press is " + str(green_prob())
     @render.text
     def blue_prob_text():
-        return "The probability of incrementing blue with a blue button press is " + str(blue_prob())
+        return "The probability of modifying blue with a blue button press is " + str(blue_prob())
     @render.plot
     def plot():
         k = 0 # Make bars aligned well
-        max_val = max(green_goal(), blue_goal(), count1(), count2())
+        max_val = max(green_goal(), blue_goal(), count1(), count2(), green_start(), blue_start())
         while max_val > 2**k-1:
             k += 1 # So the plot isn't as jittery
         plt.bar(x=["Green","Blue"],height=[count1(),count2()],color=[f'{green_hex}',f'{blue_hex}'])
