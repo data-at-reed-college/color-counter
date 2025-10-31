@@ -212,10 +212,41 @@ def server(input, output, session):
         return str(count2())
     @render.text
     def green_prob_text():
-        return "The probability of modifying green with a green button press is " + str(green_prob())
+        string="With a green button press, there's a 80% chance to "
+        if green_sign() == 1:
+            string += "increase green and another 20% to "
+            if blue_sign() == 1:
+                string += "increment blue"
+                return string
+            string += "decrement blue"
+            return string
+        # else green_sign == -1
+        string+= "decrement green and another 20% to "
+        if blue_sign() == 1:
+            string += "increment blue"
+            return string
+        string += "decrement blue"
+        return string
+
+
     @render.text
     def blue_prob_text():
-        return "The probability of modifying blue with a blue button press is " + str(blue_prob())
+        string="With a blue button press, there's a 80% chance to "
+        if blue_sign() == 1:
+            string += "increase blue and another 20% to "
+            if green_sign() == 1:
+                string += "increment green"
+                return string
+            string += "decrement green"
+            return string
+        # else blue_sign == -1
+        string+= "decrement blue and another 20% to "
+        if green_sign() == 1:
+            string += "increment green"
+            return string
+        string += "decrement green"
+        return string
+
     @render.text
     def turns_left():
         return str(num_turns())
